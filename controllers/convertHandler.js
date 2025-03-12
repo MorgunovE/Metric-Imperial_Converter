@@ -53,13 +53,11 @@ function ConvertHandler() {
       return 'invalid unit';
     }
     
-    // Return unit with proper case (L for liter)
+    // Return unit with proper case (L for liter, others lowercase)
     return normalizedUnit === 'l' ? 'L' : normalizedUnit;
   };
   
   this.getReturnUnit = function(initUnit) {
-    if (initUnit === 'invalid unit') return 'invalid unit';
-    
     const unitMap = {
       'gal': 'L',
       'L': 'gal',
@@ -90,10 +88,6 @@ function ConvertHandler() {
     const lbsToKg = 0.453592;
     const miToKm = 1.60934;
     
-    if (initNum === 'invalid number' || initUnit === 'invalid unit') {
-      return 'invalid number';
-    }
-    
     let result;
     switch (initUnit) {
       case 'gal':
@@ -123,9 +117,7 @@ function ConvertHandler() {
   };
   
   this.getString = function(initNum, initUnit, returnNum, returnUnit) {
-    const initUnitString = this.spellOutUnit(initUnit);
-    const returnUnitString = this.spellOutUnit(returnUnit);
-    return `${initNum} ${initUnitString} converts to ${returnNum} ${returnUnitString}`;
+    return `${initNum} ${this.spellOutUnit(initUnit)} converts to ${returnNum} ${this.spellOutUnit(returnUnit)}`;
   };
 }
 
