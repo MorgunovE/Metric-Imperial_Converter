@@ -1,62 +1,74 @@
 function ConvertHandler() {
-  
+
   this.getNum = function(input) {
     if (!input) return 1;
-    
-    // Find where the unit starts (first letter)
-    const letterIndex = input.search(/[a-zA-Z]/);
-    
-    // If no number or unit starts at beginning, return 1
-    if (letterIndex === 0 || letterIndex === -1) return 1;
-    
-    // Extract the number part
-    const numStr = input.substring(0, letterIndex);
-    
-    // Check for double fraction (invalid)
-    if ((numStr.match(/\//g) || []).length > 1) {
-      return "invalid number";
+
+    // Strip URL prefix if users accidentally paste the full URL
+    if (input.includes('/api/convert?input=')) {
+      input = input.substring(input.indexOf('=') + 1);
     }
-    
-    // Process fraction or decimal
-    if (numStr.includes('/')) {
-      const [numerator, denominator] = numStr.split('/');
-      
-      if (denominator === '0' || parseFloat(denominator) === 0) {
-        return "invalid number"; // Division by zero
-      }
-      
-      return parseFloat(numerator) / parseFloat(denominator);
-    } else {
-      const num = parseFloat(numStr);
-      return isNaN(num) ? "invalid number" : num;
+
+    // If input only contains unit with no number
+    if (/^[a-zA-Z]+$/.test(input)) return 1;
+
+    // Find where the unit begins
+    const unitIndex = input.search(/[a-zA-Z]/);
+
+    // No number provided
+    if (unitIndex === 0) return 1;
+
+    // No unit found - try to parse the whole string as a number
+    if (unitIndex === -1) {
+      return this.parseNumber(input);
     }
+
+    // Extract the numeric part
+    const numStr = input.substring(0, unitIndex);
+    return this.parseNumber(numStr);
   };
-  
+
+  this.parseNumber = function(str) {
+    // Handle fractions
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length !== 2) return 'invalid number';
+
+      const numerator = parseFloat(parts[0]);
+      const denominator = parseFloat(parts[1]);
+
+      if (isNaN(numerator) || isNaN(denominator) || denominator === 0) {
+        return 'invalid number';
+      }
+
+      return numerator / denominator;
+    }
+
+    // Handle regular numbers
+    const num = parseFloat(str);
+    return isNaN(num) ? 'invalid number' : num;
+  };
+
   this.getUnit = function(input) {
     if (!input) return 'invalid unit';
-    
-    // Find where the unit starts
-    const letterIndex = input.search(/[a-zA-Z]/);
-    
-    // If no letters, return invalid unit
-    if (letterIndex === -1) return 'invalid unit';
-    
-    // Extract the unit
-    let unit = input.substring(letterIndex);
-    
-    // Normalize to lowercase for validation
-    const normalizedUnit = unit.toLowerCase();
-    
-    // Check if unit is valid
-    const validUnits = ['gal', 'l', 'mi', 'km', 'lbs', 'kg'];
-    if (!validUnits.includes(normalizedUnit)) {
-      return 'invalid unit';
+
+    // Strip URL prefix if users accidentally paste the full URL
+    if (input.includes('/api/convert?input=')) {
+      input = input.substring(input.indexOf('=') + 1);
     }
-    
-    // Return unit with proper case (L for liter, others lowercase)
-    return normalizedUnit === 'l' ? 'L' : normalizedUnit;
+
+    const unitRegex = /[a-zA-Z]+$/;
+    const match = input.match(unitRegex);
+
+    if (!match) return 'invalid unit';
+
+    const unit = match[0].toLowerCase();
+    const validUnits = ['gal', 'l', 'mi', 'km', 'lbs', 'kg'];
+
+    if (!validUnits.includes(unit)) return 'invalid unit';
+
+    return unit === 'l' ? 'L' : unit;
   };
-  
+
   this.getReturnUnit = function(initUnit) {
     const unitMap = {
       'gal': 'L',
@@ -66,12 +78,11 @@ function ConvertHandler() {
       'lbs': 'kg',
       'kg': 'lbs'
     };
-    
     return unitMap[initUnit];
   };
 
   this.spellOutUnit = function(unit) {
-    const unitNames = {
+    const unitMap = {
       'gal': 'gallons',
       'L': 'liters',
       'mi': 'miles',
@@ -79,46 +90,31 @@ function ConvertHandler() {
       'lbs': 'pounds',
       'kg': 'kilograms'
     };
-    
-    return unitNames[unit];
+    return unitMap[unit];
   };
-  
+
   this.convert = function(initNum, initUnit) {
     const galToL = 3.78541;
     const lbsToKg = 0.453592;
     const miToKm = 1.60934;
-    
-    let result;
-    switch (initUnit) {
-      case 'gal':
-        result = initNum * galToL;
-        break;
-      case 'L':
-        result = initNum / galToL;
-        break;
-      case 'lbs':
-        result = initNum * lbsToKg;
-        break;
-      case 'kg':
-        result = initNum / lbsToKg;
-        break;
-      case 'mi':
-        result = initNum * miToKm;
-        break;
-      case 'km':
-        result = initNum / miToKm;
-        break;
-      default:
-        return 'invalid unit';
-    }
-    
-    // Round to 5 decimal places
-    return Math.round(result * 100000) / 100000;
+
+    const conversionRates = {
+      'gal': galToL,
+      'L': 1 / galToL,
+      'mi': miToKm,
+      'km': 1 / miToKm,
+      'lbs': lbsToKg,
+      'kg': 1 / lbsToKg
+    };
+
+    return parseFloat((initNum * conversionRates[initUnit]).toFixed(5));
   };
-  
+
   this.getString = function(initNum, initUnit, returnNum, returnUnit) {
     return `${initNum} ${this.spellOutUnit(initUnit)} converts to ${returnNum} ${this.spellOutUnit(returnUnit)}`;
   };
+
+
 }
 
 module.exports = ConvertHandler;
